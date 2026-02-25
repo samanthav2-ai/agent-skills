@@ -4,6 +4,27 @@ Reusable skills for Clawdbot agents — media processing, integrations, and auto
 
 ## Available Skills
 
+### vector-store
+
+Semantic search and persistent knowledge storage for multi-agent coordination.
+
+**Capabilities:**
+- 🗄️ Shared Postgres with pgvector for cross-agent knowledge
+- 🔍 Semantic search over learnings and documentation
+- 📬 Inter-agent messaging queue
+- ✅ Task coordination tables
+
+**Usage:**
+```bash
+# Store knowledge
+./vector-store/scripts/store-knowledge.sh --agent jean --title "My Learning" --content "..."
+
+# Query knowledge
+./vector-store/scripts/pg-query.sh "SELECT * FROM agent_knowledge"
+```
+
+See [vector-store/SKILL.md](vector-store/SKILL.md) for full documentation.
+
 ### whatsapp-media
 
 Process images and audio from WhatsApp messages.

@@ -41,6 +41,68 @@ Follow the message patterns and standup format documented in the skill.
 
 See [inter-agent/SKILL.md](inter-agent/SKILL.md) for full protocols.
 
+### proactive-notify
+
+Surface interesting things without being asked. Reduce cognitive load by flagging what matters.
+
+**Capabilities:**
+- 🔔 Pattern-based notification system
+- 📊 Priority scoring (high/medium/low)
+- ⏱️ Cooldown/debounce to prevent spam
+- 📋 GitHub, email, calendar, social scanners
+
+**Usage:**
+```bash
+# Scan for notifications
+python3 proactive-notify/scan.py
+
+# Check for immediate alerts only
+python3 proactive-notify/scan.py --alerts
+```
+
+See [proactive-notify/SKILL.md](proactive-notify/SKILL.md) for configuration.
+
+### resilient-coding-agent
+
+Run long-running coding agents in tmux sessions that survive orchestrator restarts.
+
+**Capabilities:**
+- 🛡️ Process decoupling via tmux
+- 🔄 Automatic resume on interruption
+- 📋 Support for Codex, Claude Code, OpenCode, Pi
+
+**Usage:**
+```bash
+# Start a long-running task
+tmux new-session -d -s codex-task
+tmux send-keys -t codex-task 'codex exec --full-auto "<prompt>"' Enter
+
+# Monitor progress
+tmux capture-pane -t codex-task -p -S -200
+```
+
+See [resilient-coding-agent/SKILL.md](resilient-coding-agent/SKILL.md) for patterns.
+
+### exchange-rate
+
+Real-time forex and cryptocurrency exchange rate lookup and conversion.
+
+**Capabilities:**
+- 💱 Multi-provider fallback (QVeris)
+- 🪙 Crypto support (BTC, ETH, etc.)
+- 📊 Amount conversion
+
+**Usage:**
+```bash
+# Get exchange rate
+node exchange-rate/scripts/exchange_rate.mjs USD EUR
+
+# Convert amount
+node exchange-rate/scripts/exchange_rate.mjs USD EUR 100
+```
+
+See [exchange-rate/SKILL.md](exchange-rate/SKILL.md) for details.
+
 ### whatsapp-media
 
 Process images and audio from WhatsApp messages.

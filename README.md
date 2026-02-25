@@ -25,6 +25,22 @@ Semantic search and persistent knowledge storage for multi-agent coordination.
 
 See [vector-store/SKILL.md](vector-store/SKILL.md) for full documentation.
 
+### inter-agent
+
+Multi-agent coordination protocols for the Brotherhood of Claw.
+
+**Capabilities:**
+- 🤝 Task handoffs and status tracking
+- 📊 Standup protocol (30-min intervals)
+- 🚨 Emergency/SOS protocols
+- ⚖️ Dispute resolution
+- 📋 Priority levels (P1-P5)
+
+**Usage:**
+Follow the message patterns and standup format documented in the skill.
+
+See [inter-agent/SKILL.md](inter-agent/SKILL.md) for full protocols.
+
 ### whatsapp-media
 
 Process images and audio from WhatsApp messages.

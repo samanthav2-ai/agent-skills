@@ -1,0 +1,147 @@
+# Proactive Notification Patterns
+# Define what to watch for and when to surface it
+
+# VIP contacts - emails from these always surface
+vip_contacts:
+  - owner@example.com  # Configure with actual VIPs
+
+# Watched GitHub repos - PRs and issues here get medium priority
+watched_repos:
+  - clawdbot/clawdbot
+  - clawdbot/clawdhub
+
+# Focus topics - content related to these gets flagged
+focus_topics:
+  - AI agents
+  - LLM tooling
+  - autonomous systems
+
+patterns:
+  # GitHub Patterns
+  github_ci_failure:
+    source: github
+    enabled: true
+    priority: high
+    description: "CI failure on main branch"
+    check: "gh run list --branch main --status failure --limit 5"
+    cooldown_minutes: 60
+    template: "🔴 CI failed: {repo} - {workflow}"
+
+  github_pr_review_requested:
+    source: github
+    enabled: true  
+    priority: high
+    description: "PR requesting my review"
+    check: "gh pr list --search 'review-requested:@me'"
+    cooldown_minutes: 120
+    template: "👀 Review requested: {repo}#{number} - {title}"
+
+  github_pr_assigned:
+    source: github
+    enabled: true
+    priority: high
+    description: "PR assigned to me"
+    check: "gh pr list --assignee @me"
+    cooldown_minutes: 120
+    template: "📋 PR assigned: {repo}#{number} - {title}"
+
+  github_new_pr_watched:
+    source: github
+    enabled: true
+    priority: medium
+    description: "New PR in watched repo"
+    check: "gh pr list --repo {repo} --state open --json number,title,author,createdAt"
+    cooldown_minutes: 240
+    template: "🆕 New PR in {repo}: {title} by {author}"
+
+  github_issue_mention:
+    source: github
+    enabled: true
+    priority: medium
+    description: "Mentioned in an issue"
+    check: "gh issue list --search 'mentions:@me'"
+    cooldown_minutes: 120
+    template: "💬 Mentioned in issue: {repo}#{number}"
+
+  # Email Patterns (requires email skill configured)
+  email_vip:
+    source: email
+    enabled: true
+    priority: high
+    description: "Email from VIP contact"
+    check_script: "email_check_vip"
+    cooldown_minutes: 30
+    template: "📧 VIP email from {sender}: {subject}"
+
+  email_urgent_keywords:
+    source: email
+    enabled: true
+    priority: high
+    description: "Email with urgent keywords"
+    keywords:
+      - urgent
+      - asap
+      - emergency
+      - deadline today
+      - immediate
+    cooldown_minutes: 30
+    template: "⚠️ Urgent email: {subject}"
+
+  # Calendar Patterns (requires calendar skill)
+  calendar_conflict:
+    source: calendar
+    enabled: true
+    priority: high
+    description: "Calendar conflict detected"
+    check_script: "calendar_check_conflicts"
+    cooldown_minutes: 60
+    template: "📅 Calendar conflict: {event1} overlaps {event2}"
+
+  calendar_soon_no_prep:
+    source: calendar
+    enabled: true
+    priority: medium
+    description: "Meeting soon without prep notes"
+    lookahead_minutes: 60
+    check_script: "calendar_check_prep"
+    cooldown_minutes: 30
+    template: "⏰ Meeting in {minutes}min: {title} - no prep notes"
+
+  # Social Patterns
+  social_mention:
+    source: social
+    enabled: false  # Enable when social connected
+    priority: medium
+    description: "Direct @mention on social"
+    platforms:
+      - twitter
+      - linkedin
+    cooldown_minutes: 60
+    template: "🐦 {platform} mention: {text}"
+
+# Scoring adjustments
+scoring:
+  base_scores:
+    high: 100
+    medium: 50
+    low: 10
+  
+  modifiers:
+    vip_contact: +20
+    direct_mention: +30
+    active_project: +10
+    repeat_notification: -20
+  
+  thresholds:
+    immediate_alert: 80
+    briefing_include: 40
+    log_only: 0
+
+# Anti-spam settings
+anti_spam:
+  max_daily_alerts: 10
+  debounce_same_source_minutes: 60
+  quiet_hours:
+    start: "22:00"
+    end: "07:00"
+    allow_high_priority: true

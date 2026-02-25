@@ -1,0 +1,20 @@
+[Unit]
+Description=Clawdbot Gateway Watchdog
+After=network.target
+# Explicitly NOT dependent on clawdbot.service - runs independently
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu
+Environment=HOME=/home/ubuntu
+Environment=CLAWDBOT_STATE_DIR=/home/ubuntu/.clawdbot
+Environment=WACLI_STORE=/home/ubuntu/.wacli
+Environment=CLAWDBOT_SOS_TARGET=14156236154@s.whatsapp.net
+EnvironmentFile=-/home/ubuntu/.clawdbot/.env
+ExecStart=/home/ubuntu/clawd/scripts/clawdbot-watchdog.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

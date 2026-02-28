@@ -1,0 +1,231 @@
+#!/usr/bin/env bash
+#
+# agent-transfer - CLI tool for OS-1 agent file transfers
+#
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PYTHON_LIB="$SCRIPT_DIR/os1_transfer.py"
+
+# Ensure library exists
+if [[ ! -f "$PYTHON_LIB" ]]; then
+    echo "Error: os1_transfer.py not found at $PYTHON_LIB"
+    exit 1
+fi
+
+# Determine agent name
+if [[ -z "${AGENT_NAME:-}" ]]; then
+    # Try to infer from hostname or default
+    AGENT_NAME=$(hostname | grep -oE '(samantha|jared|jean)' || echo "samantha")
+fi
+export AGENT_NAME
+
+usage() {
+    cat << EOF
+agent-transfer - OS-1 Agent File Transfer Tool
+
+Usage:
+  agent-transfer send <file> --to <recipient> [options]
+  agent-transfer list [--recipient <name>]
+  agent-transfer download <transfer-id> [--dest <dir>]
+  agent-transfer download-all [--dest <dir>]
+  agent-transfer status <transfer-id>
+  agent-transfer cleanup
+  agent-transfer help
+
+Commands:
+  send          Send a file to another agent
+  list          List pending incoming transfers
+  download      Download a specific transfer
+  download-all  Download all pending transfers
+  status        Check transfer status
+  cleanup       Remove expired transfers
+  help          Show this help
+
+Send Options:
+  --to <agent>       Recipient agent (required)
+  --metadata <json>  Metadata as JSON string
+  --expires <hours>  Expiration in hours (default: 168 = 7 days)
+  --mime <type>      MIME type (auto-detected if not provided)
+
+Examples:
+  # Send file to Jared
+  agent-transfer send /path/to/file.pdf --to jared
+
+  # Send with metadata
+  agent-transfer send report.md --to jean --metadata '{"project":"referral-flow"}'
+
+  # Send with 24-hour expiration
+  agent-transfer send temp.log --to samantha --expires 24
+
+  # List pending files
+  agent-transfer list
+
+  # Download specific file
+  agent-transfer download abc-123-def
+
+  # Download all to specific directory
+  agent-transfer download-all --dest ~/downloads
+
+EOF
+}
+
+send_file() {
+    local file="$1"
+    shift
+    
+    local recipient=""
+    local metadata="{}"
+    local expires=""
+    local mime=""
+    
+    # Parse options
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --to)
+                recipient="$2"
+                shift 2
+                ;;
+            --metadata)
+                metadata="$2"
+                shift 2
+                ;;
+            --expires)
+                expires="$2"
+                shift 2
+                ;;
+            --mime)
+                mime="$2"
+                shift 2
+                ;;
+            *)
+                echo "Error: Unknown option: $1"
+                exit 1
+                ;;
+        esac
+    done
+    
+    if [[ -z "$recipient" ]]; then
+        echo "Error: --to <recipient> is required"
+        exit 1
+    fi
+    
+    if [[ ! -f "$file" ]]; then
+        echo "Error: File not found: $file"
+        exit 1
+    fi
+    
+    # Build Python command
+    local cmd="from os1_transfer import AgentTransfer; t = AgentTransfer('$AGENT_NAME'); "
+    cmd+="print(t.send('$file', '$recipient'"
+    
+    if [[ -n "$expires" ]]; then
+        cmd+=", expires_hours=$expires"
+    fi
+    
+    if [[ -n "$mime" ]]; then
+        cmd+=", mime_type='$mime'"
+    fi
+    
+    cmd+=", metadata=$metadata"
+    cmd+="))"
+    
+    python3 -c "$cmd"
+}
+
+list_pending() {
+    python3 "$PYTHON_LIB" list
+}
+
+download_file() {
+    local transfer_id="$1"
+    local dest="${2:-.}"
+    
+    python3 -c "from os1_transfer import AgentTransfer; t = AgentTransfer('$AGENT_NAME'); print(t.download('$transfer_id', '$dest'))"
+}
+
+download_all() {
+    local dest="${1:-.}"
+    
+    python3 -c "
+from os1_transfer import AgentTransfer
+t = AgentTransfer('$AGENT_NAME')
+pending = t.list_pending()
+if not pending:
+    print('No pending transfers')
+else:
+    for record in pending:
+        path = t.download(record['id'], '$dest')
+        print(f\"Downloaded: {path}\")
+"
+}
+
+get_status() {
+    local transfer_id="$1"
+    python3 "$PYTHON_LIB" status "$transfer_id"
+}
+
+cleanup_expired() {
+    python3 "$PYTHON_LIB" cleanup
+}
+
+# Main command dispatcher
+case "${1:-help}" in
+    send)
+        if [[ $# -lt 2 ]]; then
+            echo "Error: send requires a file path"
+            usage
+            exit 1
+        fi
+        send_file "$2" "${@:3}"
+        ;;
+    
+    list)
+        list_pending
+        ;;
+    
+    download)
+        if [[ $# -lt 2 ]]; then
+            echo "Error: download requires a transfer-id"
+            usage
+            exit 1
+        fi
+        if [[ "$3" == "--dest" ]]; then
+            download_file "$2" "$4"
+        else
+            download_file "$2"
+        fi
+        ;;
+    
+    download-all)
+        if [[ "$2" == "--dest" ]]; then
+            download_all "$3"
+        else
+            download_all
+        fi
+        ;;
+    
+    status)
+        if [[ $# -lt 2 ]]; then
+            echo "Error: status requires a transfer-id"
+            usage
+            exit 1
+        fi
+        get_status "$2"
+        ;;
+    
+    cleanup)
+        cleanup_expired
+        ;;
+    
+    help|--help|-h)
+        usage
+        ;;
+    
+    *)
+        echo "Error: Unknown command: $1"
+        usage
+        exit 1
+        ;;
+esac
